@@ -1,5 +1,7 @@
 # Social Sentiment - AI-Powered Social Media Analysis
 
+Adding text
+
 A production-grade Next.js application that connects to Meta Graph API to fetch social media comments, perform sentiment analysis, and provide comprehensive data exploration with CSV export functionality.
 
 ![Social Sentiment Dashboard](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Social+Sentiment+Dashboard)
