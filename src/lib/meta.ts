@@ -1,375 +1,385 @@
 // src/lib/meta.ts
 import crypto from 'crypto'
 
-// Types for Meta API responses
-export interface FacebookPage {
+interface FacebookPage {
   id: string
   name: string
   access_token: string
-  picture?: {
-    data: {
-      url: string
-    }
-  }
+  category: string
+  tasks?: string[]
 }
 
-export interface InstagramAccount {
-  id: string
-  username: string
-}
-
-export interface FacebookPost {
+interface FacebookPost {
   id: string
   message?: string
+  story?: string
   created_time: string
+  updated_time: string
   permalink_url?: string
-  likes?: {
-    summary: {
-      total_count: number
-    }
-  }
   comments?: {
-    summary: {
-      total_count: number
+    data: FacebookComment[]
+    paging?: {
+      cursors: {
+        before: string
+        after: string
+      }
+      next?: string
     }
   }
 }
 
-export interface InstagramPost {
+interface FacebookComment {
   id: string
-  caption?: string
-  timestamp: string
-  permalink?: string
-  like_count?: number
-  comments_count?: number
-}
-
-export interface FacebookComment {
-  id: string
-  from?: {
-    id: string
-    name: string
-  }
   message: string
   created_time: string
-  like_count: number
+  from: {
+    name: string
+    id: string
+  }
   parent?: {
     id: string
   }
+  attachment?: {
+    type: string
+    url: string
+  }
+  like_count?: number
+  comment_count?: number
 }
 
-export interface InstagramComment {
+interface InstagramMedia {
+  id: string
+  caption?: string
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
+  media_url: string
+  permalink: string
+  timestamp: string
+  comments?: {
+    data: InstagramComment[]
+    paging?: {
+      cursors: {
+        before: string
+        after: string
+      }
+      next?: string
+    }
+  }
+}
+
+interface InstagramComment {
   id: string
   text: string
   timestamp: string
-  username: string
-  like_count: number
+  from: {
+    id: string
+    username: string
+  }
+  replies?: {
+    data: InstagramComment[]
+  }
+  like_count?: number
 }
 
-export interface PaginatedResponse<T> {
-  data: T[]
-  paging?: {
-    cursors?: {
-      before: string
-      after: string
-    }
-    next?: string
-    previous?: string
-  }
+interface TokenInfo {
+  access_token: string
+  token_type: string
+  expires_in?: number
 }
 
-// Rate limiter class
-class RateLimiter {
-  private requests: number[] = []
-  private readonly maxRequests: number
-  private readonly timeWindow: number
-
-  constructor(maxRequests: number = 200, timeWindow: number = 3600000) { // 200 requests per hour
-    this.maxRequests = maxRequests
-    this.timeWindow = timeWindow
-  }
-
-  async checkLimit(): Promise<void> {
-    const now = Date.now()
-    this.requests = this.requests.filter(time => now - time < this.timeWindow)
-
-    if (this.requests.length >= this.maxRequests) {
-      const oldestRequest = Math.min(...this.requests)
-      const waitTime = this.timeWindow - (now - oldestRequest)
-      await this.sleep(waitTime)
-    }
-
-    this.requests.push(now)
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+interface GraphAPIError {
+  error: {
+    message: string
+    type: string
+    code: number
+    error_subcode?: number
+    fbtrace_id: string
   }
 }
 
-// Token encryption utilities
-export class TokenEncryption {
-  private static readonly algorithm = 'aes-256-gcm'
-  private static readonly keyLength = 32
-
-  static encrypt(text: string): string {
-    const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex')
-    const iv = crypto.randomBytes(16)
-    const cipher = crypto.createCipher(this.algorithm, key)
-    
-    let encrypted = cipher.update(text, 'utf8', 'hex')
-    encrypted += cipher.final('hex')
-    
-    const authTag = cipher.getAuthTag()
-    
-    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted
-  }
-
-  static decrypt(encryptedText: string): string {
-    const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex')
-    const parts = encryptedText.split(':')
-    const iv = Buffer.from(parts[0], 'hex')
-    const authTag = Buffer.from(parts[1], 'hex')
-    const encrypted = parts[2]
-    
-    const decipher = crypto.createDecipher(this.algorithm, key)
-    decipher.setAuthTag(authTag)
-    
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    
-    return decrypted
-  }
-}
-
-// Main Meta API client
 export class MetaGraphAPI {
-  private static readonly BASE_URL = 'https://graph.facebook.com/v18.0'
-  private rateLimiter = new RateLimiter()
+  private baseUrl = 'https://graph.facebook.com/v18.0'
+  private encryptionKey: string
 
-  constructor(private accessToken: string) {}
+  constructor(encryptionKey?: string) {
+    this.encryptionKey = encryptionKey || process.env.ENCRYPTION_KEY || 'default-key-change-in-production'
+  }
 
-  // Generic API request with retry logic
-  private async makeRequest<T>(
-    endpoint: string,
-    params: Record<string, any> = {},
-    maxRetries: number = 3
-  ): Promise<T> {
-    await this.rateLimiter.checkLimit()
+  // Token encryption/decryption
+  encryptToken(token: string): string {
+    try {
+      const algorithm = 'aes-256-cbc'
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32)
+      const iv = crypto.randomBytes(16)
+      
+      const cipher = crypto.createCipher(algorithm, key)
+      let encrypted = cipher.update(token, 'utf8', 'hex')
+      encrypted += cipher.final('hex')
+      
+      return iv.toString('hex') + ':' + encrypted
+    } catch (error) {
+      console.error('Token encryption failed:', error)
+      return token // Fallback to unencrypted
+    }
+  }
 
-    const url = new URL(`${MetaGraphAPI.BASE_URL}${endpoint}`)
-    url.searchParams.append('access_token', this.accessToken)
+  decryptToken(encryptedToken: string): string {
+    try {
+      const algorithm = 'aes-256-cbc'
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32)
+      
+      const parts = encryptedToken.split(':')
+      if (parts.length !== 2) {
+        return encryptedToken // Assume it's already decrypted
+      }
+      
+      const iv = Buffer.from(parts[0], 'hex')
+      const encrypted = parts[1]
+      
+      const decipher = crypto.createDecipher(algorithm, key)
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      
+      return decrypted
+    } catch (error) {
+      console.error('Token decryption failed:', error)
+      return encryptedToken // Return as-is if decryption fails
+    }
+  }
+
+  // Make authenticated requests to Graph API
+  private async makeRequest<T>(endpoint: string, accessToken: string, params: Record<string, string> = {}): Promise<T> {
+    const url = new URL(`${this.baseUrl}/${endpoint}`)
+    url.searchParams.append('access_token', accessToken)
     
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value))
-      }
+      url.searchParams.append(key, value)
     })
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const response = await fetch(url.toString())
-        
-        if (response.status === 429) {
-          // Rate limited - exponential backoff
-          const delay = Math.min(1000 * Math.pow(2, attempt), 30000)
-          await this.sleep(delay)
-          continue
-        }
+    try {
+      const response = await fetch(url.toString())
+      const data = await response.json()
 
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`Meta API Error: ${error.error?.message || response.statusText}`)
-        }
-
-        return await response.json()
-      } catch (error) {
-        if (attempt === maxRetries - 1) {
-          throw error
-        }
-        
-        // Exponential backoff for other errors
-        const delay = Math.min(1000 * Math.pow(2, attempt), 30000)
-        await this.sleep(delay)
+      if (!response.ok) {
+        const error = data as GraphAPIError
+        throw new Error(`Graph API Error: ${error.error.message} (Code: ${error.error.code})`)
       }
+
+      return data as T
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Unknown API error occurred')
     }
-
-    throw new Error('Max retries exceeded')
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+  // Get user's Facebook pages
+  async getUserPages(userAccessToken: string): Promise<FacebookPage[]> {
+    try {
+      const response = await this.makeRequest<{ data: FacebookPage[] }>(
+        'me/accounts',
+        userAccessToken,
+        {
+          fields: 'id,name,access_token,category,tasks'
+        }
+      )
+
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch user pages:', error)
+      return []
+    }
   }
 
-  // Token management
-  async exchangeForLongLivedToken(shortLivedToken: string): Promise<string> {
-    const response = await this.makeRequest<{access_token: string}>('/oauth/access_token', {
-      grant_type: 'fb_exchange_token',
-      client_id: process.env.FACEBOOK_APP_ID,
-      client_secret: process.env.FACEBOOK_APP_SECRET,
-      fb_exchange_token: shortLivedToken
-    })
-
-    return response.access_token
-  }
-
-  async getPageAccessTokens(): Promise<FacebookPage[]> {
-    const response = await this.makeRequest<PaginatedResponse<FacebookPage>>('/me/accounts', {
-      fields: 'id,name,access_token,picture'
-    })
-
-    return response.data
-  }
-
-  // Facebook Pages API
-  async getPagePosts(
-    pageId: string,
-    pageToken: string,
-    since?: string,
-    until?: string,
-    limit: number = 25
-  ): Promise<FacebookPost[]> {
-    const api = new MetaGraphAPI(pageToken)
-    const posts: FacebookPost[] = []
-    let nextUrl: string | undefined
-
-    do {
-      const params: Record<string, any> = {
-        fields: 'id,message,created_time,permalink_url,likes.summary(true),comments.summary(true)',
-        limit
+  // Get posts from a Facebook page
+  async getPagePosts(pageAccessToken: string, pageId: string, limit = 25, since?: string): Promise<FacebookPost[]> {
+    try {
+      const params: Record<string, string> = {
+        fields: 'id,message,story,created_time,updated_time,permalink_url',
+        limit: limit.toString()
       }
 
-      if (since) params.since = since
-      if (until) params.until = until
+      if (since) {
+        params.since = since
+      }
 
-      const response = await api.makeRequest<PaginatedResponse<FacebookPost>>(
-        `/${pageId}/posts`,
+      const response = await this.makeRequest<{ data: FacebookPost[] }>(
+        `${pageId}/posts`,
+        pageAccessToken,
         params
       )
 
-      posts.push(...response.data)
-      nextUrl = response.paging?.next
-    } while (nextUrl && posts.length < 1000) // Safety limit
-
-    return posts
-  }
-
-  async getPostComments(
-    postId: string,
-    pageToken: string,
-    limit: number = 100
-  ): Promise<FacebookComment[]> {
-    const api = new MetaGraphAPI(pageToken)
-    const comments: FacebookComment[] = []
-    let nextUrl: string | undefined
-
-    do {
-      const response = await api.makeRequest<PaginatedResponse<FacebookComment>>(
-        `/${postId}/comments`,
-        {
-          fields: 'id,from,message,created_time,like_count,parent',
-          filter: 'stream',
-          limit
-        }
-      )
-
-      comments.push(...response.data)
-      nextUrl = response.paging?.next
-    } while (nextUrl && comments.length < 10000) // Safety limit
-
-    return comments
-  }
-
-  // Instagram Business API
-  async getConnectedInstagramAccount(pageId: string, pageToken: string): Promise<InstagramAccount | null> {
-    try {
-      const api = new MetaGraphAPI(pageToken)
-      const response = await api.makeRequest<{connected_instagram_account?: InstagramAccount}>(
-        `/${pageId}`,
-        {
-          fields: 'connected_instagram_account'
-        }
-      )
-
-      return response.connected_instagram_account || null
+      return response.data || []
     } catch (error) {
-      console.warn('No Instagram account connected:', error)
+      console.error('Failed to fetch page posts:', error)
+      return []
+    }
+  }
+
+  // Get comments from a Facebook post
+  async getPostComments(pageAccessToken: string, postId: string, limit = 100): Promise<FacebookComment[]> {
+    try {
+      const response = await this.makeRequest<{ data: FacebookComment[] }>(
+        `${postId}/comments`,
+        pageAccessToken,
+        {
+          fields: 'id,message,created_time,from,parent,attachment,like_count,comment_count',
+          limit: limit.toString(),
+          order: 'chronological'
+        }
+      )
+
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch post comments:', error)
+      return []
+    }
+  }
+
+  // Get Instagram business account
+  async getInstagramAccount(pageAccessToken: string, pageId: string): Promise<{ id: string; username: string } | null> {
+    try {
+      const response = await this.makeRequest<{ instagram_business_account?: { id: string } }>(
+        pageId,
+        pageAccessToken,
+        {
+          fields: 'instagram_business_account'
+        }
+      )
+
+      if (!response.instagram_business_account) {
+        return null
+      }
+
+      const accountInfo = await this.makeRequest<{ id: string; username: string }>(
+        response.instagram_business_account.id,
+        pageAccessToken,
+        {
+          fields: 'id,username'
+        }
+      )
+
+      return accountInfo
+    } catch (error) {
+      console.error('Failed to fetch Instagram account:', error)
       return null
     }
   }
 
-  async getInstagramPosts(
-    igUserId: string,
-    pageToken: string,
-    since?: string,
-    until?: string,
-    limit: number = 25
-  ): Promise<InstagramPost[]> {
-    const api = new MetaGraphAPI(pageToken)
-    const posts: InstagramPost[] = []
-    let nextUrl: string | undefined
-
-    do {
-      const params: Record<string, any> = {
-        fields: 'id,caption,timestamp,permalink,like_count,comments_count',
-        limit
-      }
-
-      if (since) params.since = since
-      if (until) params.until = until
-
-      const response = await api.makeRequest<PaginatedResponse<InstagramPost>>(
-        `/${igUserId}/media`,
-        params
-      )
-
-      posts.push(...response.data)
-      nextUrl = response.paging?.next
-    } while (nextUrl && posts.length < 1000) // Safety limit
-
-    return posts
-  }
-
-  async getInstagramComments(
-    mediaId: string,
-    pageToken: string,
-    limit: number = 100
-  ): Promise<InstagramComment[]> {
-    const api = new MetaGraphAPI(pageToken)
-    const comments: InstagramComment[] = []
-    let nextUrl: string | undefined
-
-    do {
-      const response = await api.makeRequest<PaginatedResponse<InstagramComment>>(
-        `/${mediaId}/comments`,
+  // Get Instagram media
+  async getInstagramMedia(pageAccessToken: string, instagramAccountId: string, limit = 25): Promise<InstagramMedia[]> {
+    try {
+      const response = await this.makeRequest<{ data: InstagramMedia[] }>(
+        `${instagramAccountId}/media`,
+        pageAccessToken,
         {
-          fields: 'id,text,timestamp,username,like_count',
-          limit
+          fields: 'id,caption,media_type,media_url,permalink,timestamp',
+          limit: limit.toString()
         }
       )
 
-      comments.push(...response.data)
-      nextUrl = response.paging?.next
-    } while (nextUrl && comments.length < 10000) // Safety limit
-
-    return comments
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch Instagram media:', error)
+      return []
+    }
   }
 
-  // Token validation
-  async validateToken(): Promise<boolean> {
+  // Get Instagram media comments
+  async getInstagramComments(pageAccessToken: string, mediaId: string, limit = 100): Promise<InstagramComment[]> {
     try {
-      await this.makeRequest('/me', { fields: 'id' })
+      const response = await this.makeRequest<{ data: InstagramComment[] }>(
+        `${mediaId}/comments`,
+        pageAccessToken,
+        {
+          fields: 'id,text,timestamp,from,replies,like_count',
+          limit: limit.toString()
+        }
+      )
+
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch Instagram comments:', error)
+      return []
+    }
+  }
+
+  // Refresh long-lived access token
+  async refreshLongLivedToken(shortLivedToken: string): Promise<TokenInfo | null> {
+    try {
+      const url = new URL(`${this.baseUrl}/oauth/access_token`)
+      url.searchParams.append('grant_type', 'fb_exchange_token')
+      url.searchParams.append('client_id', process.env.FACEBOOK_APP_ID || '')
+      url.searchParams.append('client_secret', process.env.FACEBOOK_APP_SECRET || '')
+      url.searchParams.append('fb_exchange_token', shortLivedToken)
+
+      const response = await fetch(url.toString())
+      const data = await response.json()
+
+      if (!response.ok) {
+        const error = data as GraphAPIError
+        throw new Error(`Token refresh failed: ${error.error.message}`)
+      }
+
+      return data as TokenInfo
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      return null
+    }
+  }
+
+  // Validate access token
+  async validateToken(accessToken: string): Promise<boolean> {
+    try {
+      await this.makeRequest<Record<string, unknown>>('me', accessToken, { fields: 'id' })
       return true
     } catch (error) {
       return false
     }
   }
 
-  // Debug token info
-  async getTokenInfo(): Promise<any> {
-    return await this.makeRequest('/debug_token', {
-      input_token: this.accessToken
-    })
+  // Get token info (expiration, scopes, etc.)
+  async getTokenInfo(accessToken: string): Promise<Record<string, unknown> | null> {
+    try {
+      const response = await this.makeRequest<Record<string, unknown>>(
+        'debug_token',
+        accessToken,
+        {
+          input_token: accessToken
+        }
+      )
+
+      return response
+    } catch (error) {
+      console.error('Failed to get token info:', error)
+      return null
+    }
   }
+
+  // Rate limiting helper
+  async withRateLimit<T>(operation: () => Promise<T>, retries = 3): Promise<T> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        return await operation()
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('rate limit')) {
+          if (attempt === retries) throw error
+          
+          // Exponential backoff
+          const delay = Math.pow(2, attempt) * 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+        throw error
+      }
+    }
+    
+    throw new Error('Max retries exceeded')
+  }
+}
+
+// Factory function for creating API client
+export function createMetaAPI(encryptionKey?: string): MetaGraphAPI {
+  return new MetaGraphAPI(encryptionKey)
 }
 

@@ -1,131 +1,145 @@
 // src/lib/workers/fetch-posts.ts
-import { PrismaClient, Platform, JobType } from '@prisma/client'
-import { MetaGraphAPI, TokenEncryption } from '../meta'
-import { JobQueue } from '../queue'
+import { PrismaClient } from '@prisma/client'
+import { createMetaAPI } from '../meta'
+import { getJobQueue, JobData } from '../queue'
 
 const prisma = new PrismaClient()
+const metaAPI = createMetaAPI()
+const jobQueue = getJobQueue()
 
-export async function fetchPostsForPage(
-  pageId: string,
-  dateRange?: { since: string; until: string },
-  platform?: 'FACEBOOK' | 'INSTAGRAM'
-): Promise<void> {
+interface FetchPostsData extends JobData {
+  pageId: string
+  batchSize?: number
+  since?: string
+}
+
+interface FetchPostsResult {
+  postsProcessed: number
+  commentsJobsCreated: number
+  errors: string[]
+}
+
+export async function fetchPosts(data: FetchPostsData): Promise<FetchPostsResult> {
+  const { pageId, batchSize = 25, since } = data
+  const result: FetchPostsResult = {
+    postsProcessed: 0,
+    commentsJobsCreated: 0,
+    errors: []
+  }
+
   try {
-    // Get page details
+    // Get page information
     const page = await prisma.page.findUnique({
-      where: { id: pageId }
+      where: { id: pageId },
+      include: { user: true }
     })
 
     if (!page) {
-      throw new Error(`Page not found: ${pageId}`)
+      throw new Error(`Page ${pageId} not found`)
     }
 
-    // Decrypt page access token
-    const pageToken = TokenEncryption.decrypt(page.pageAccessToken)
-    const api = new MetaGraphAPI(pageToken)
-
-    // Validate token
-    const isValid = await api.validateToken()
-    if (!isValid) {
-      throw new Error(`Invalid token for page: ${page.name}`)
+    if (!page.isActive) {
+      throw new Error(`Page ${pageId} is not active`)
     }
 
-    let posts: any[] = []
+    // Decrypt access token
+    const accessToken = metaAPI.decryptToken(page.accessToken)
 
-    if (page.platform === Platform.FACEBOOK) {
-      // Fetch Facebook posts
-      const fbPosts = await api.getPagePosts(
-        page.externalId,
-        pageToken,
-        dateRange?.since,
-        dateRange?.until
-      )
+    // Validate token before proceeding
+    const isValidToken = await metaAPI.validateToken(accessToken)
+    if (!isValidToken) {
+      throw new Error(`Invalid access token for page ${pageId}`)
+    }
 
-      posts = fbPosts.map(post => ({
-        pageId: page.id,
-        platform: Platform.FACEBOOK,
-        externalId: post.id,
-        message: post.message,
-        caption: null,
-        createdTime: new Date(post.created_time),
-        permalinkUrl: post.permalink_url,
-        likeCount: post.likes?.summary?.total_count || 0,
-        commentCount: post.comments?.summary?.total_count || 0
-      }))
+    // Fetch posts from Facebook/Instagram
+    let posts: Array<{ id: string; message?: string; story?: string; created_time: string; updated_time: string }>
 
-    } else if (page.platform === Platform.INSTAGRAM) {
-      // Check if we have Instagram access
-      const igAccount = await api.getConnectedInstagramAccount(page.externalId, pageToken)
-      if (!igAccount) {
-        throw new Error(`No Instagram account connected to page: ${page.name}`)
+    if (page.platform === 'FACEBOOK') {
+      posts = await metaAPI.getPagePosts(accessToken, page.pageId, batchSize, since)
+    } else if (page.platform === 'INSTAGRAM') {
+      // For Instagram, we need to get the Instagram Business Account ID first
+      const instagramAccount = await metaAPI.getInstagramAccount(accessToken, page.pageId)
+      if (!instagramAccount) {
+        throw new Error(`No Instagram Business Account found for page ${pageId}`)
       }
 
-      // Fetch Instagram posts
-      const igPosts = await api.getInstagramPosts(
-        igAccount.id,
-        pageToken,
-        dateRange?.since,
-        dateRange?.until
-      )
-
-      posts = igPosts.map(post => ({
-        pageId: page.id,
-        platform: Platform.INSTAGRAM,
-        externalId: post.id,
-        message: null,
-        caption: post.caption,
-        createdTime: new Date(post.timestamp),
-        permalinkUrl: post.permalink,
-        likeCount: post.like_count || 0,
-        commentCount: post.comments_count || 0
+      const media = await metaAPI.getInstagramMedia(accessToken, instagramAccount.id, batchSize)
+      posts = media.map(item => ({
+        id: item.id,
+        message: item.caption,
+        created_time: item.timestamp,
+        updated_time: item.timestamp
       }))
+    } else {
+      throw new Error(`Unsupported platform: ${page.platform}`)
     }
 
-    console.log(`Fetched ${posts.length} posts for page ${page.name}`)
-
-    // Upsert posts to database
-    const queue = JobQueue.getInstance()
-    
-    for (const postData of posts) {
-      // Upsert post
-      const post = await prisma.post.upsert({
-        where: {
-          externalId_platform: {
-            externalId: postData.externalId,
-            platform: postData.platform
-          }
-        },
-        update: {
-          likeCount: postData.likeCount,
-          commentCount: postData.commentCount,
-          lastFetchedAt: new Date()
-        },
-        create: {
-          ...postData,
-          fetchedAt: new Date()
-        }
-      })
-
-      // Enqueue comment fetching job if post has comments
-      if (postData.commentCount > 0) {
-        await queue.enqueue(JobType.FETCH_COMMENTS, {
-          postId: post.id,
-          platform: postData.platform
+    // Process each post
+    for (const post of posts) {
+      try {
+        // Check if post already exists
+        const existingPost = await prisma.post.findUnique({
+          where: { postId: post.id }
         })
+
+        if (existingPost) {
+          // Update existing post
+          await prisma.post.update({
+            where: { id: existingPost.id },
+            data: {
+              content: post.message || post.story || '',
+              updatedTime: new Date(post.updated_time)
+            }
+          })
+        } else {
+          // Create new post
+          await prisma.post.create({
+            data: {
+              postId: post.id,
+              pageId: page.id,
+              content: post.message || post.story || '',
+              platform: page.platform,
+              createdTime: new Date(post.created_time),
+              updatedTime: new Date(post.updated_time)
+            }
+          })
+        }
+
+        // Queue job to fetch comments for this post
+        await jobQueue.addJob('FETCH_COMMENTS', {
+          pageId: page.id,
+          postId: post.id,
+          platform: page.platform
+        }, {
+          priority: 'NORMAL',
+          delay: 1000 // Small delay to avoid rate limiting
+        })
+
+        result.postsProcessed++
+        result.commentsJobsCreated++
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error processing post'
+        console.error(`Error processing post ${post.id}:`, errorMessage)
+        result.errors.push(`Post ${post.id}: ${errorMessage}`)
       }
     }
 
-    // Update page last fetched timestamp
+    // Update page last sync time
     await prisma.page.update({
       where: { id: pageId },
-      data: { updatedAt: new Date() }
+      data: { lastSync: new Date() }
     })
 
-    console.log(`Successfully processed ${posts.length} posts for page ${page.name}`)
+    console.log(`Fetch posts completed for page ${pageId}: ${result.postsProcessed} posts processed`)
 
   } catch (error) {
-    console.error(`Error fetching posts for page ${pageId}:`, error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error in fetch posts'
+    console.error(`Fetch posts failed for page ${pageId}:`, errorMessage)
+    result.errors.push(errorMessage)
     throw error
   }
+
+  return result
 }
 
