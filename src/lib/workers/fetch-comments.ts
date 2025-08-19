@@ -1,150 +1,119 @@
 // src/lib/workers/fetch-comments.ts
-import { PrismaClient } from '@prisma/client'
-import { createMetaAPI } from '../meta'
-import { getJobQueue, JobData } from '../queue'
+import { PrismaClient, Platform, JobType } from '@prisma/client'
+import { MetaGraphAPI, TokenEncryption } from '../meta'
+import { JobQueue } from '../queue'
 
 const prisma = new PrismaClient()
-const metaAPI = createMetaAPI()
-const jobQueue = getJobQueue()
 
-interface FetchCommentsData extends JobData {
-  pageId: string
-  postId: string
-  platform: string
-  batchSize?: number
-}
-
-interface FetchCommentsResult {
-  commentsProcessed: number
-  analysisJobsCreated: number
-  errors: string[]
-}
-
-export async function fetchComments(data: FetchCommentsData): Promise<FetchCommentsResult> {
-  const { pageId, postId, platform, batchSize = 100 } = data
-  const result: FetchCommentsResult = {
-    commentsProcessed: 0,
-    analysisJobsCreated: 0,
-    errors: []
-  }
-
+export async function fetchCommentsForPost(
+  postId: string,
+  platform?: 'FACEBOOK' | 'INSTAGRAM'
+): Promise<void> {
   try {
-    // Get page information
-    const page = await prisma.page.findUnique({
-      where: { id: pageId }
-    })
-
-    if (!page) {
-      throw new Error(`Page ${pageId} not found`)
-    }
-
-    // Get post information
-    const post = await prisma.post.findFirst({
-      where: { 
-        postId: postId,
-        pageId: pageId
-      }
+    // Get post details with page information
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: { page: true }
     })
 
     if (!post) {
-      throw new Error(`Post ${postId} not found for page ${pageId}`)
+      throw new Error(`Post not found: ${postId}`)
     }
 
-    // Decrypt access token
-    const accessToken = metaAPI.decryptToken(page.accessToken)
+    // Decrypt page access token
+    const pageToken = TokenEncryption.decrypt(post.page.pageAccessToken)
+    const api = new MetaGraphAPI(pageToken)
 
-    // Fetch comments based on platform
-    let comments: Array<{
-      id: string
-      message?: string
-      text?: string
-      created_time?: string
-      timestamp?: string
-      from: { name?: string; username?: string; id: string }
-      like_count?: number
-    }>
+    let comments: any[] = []
 
-    if (platform === 'FACEBOOK') {
-      comments = await metaAPI.getPostComments(accessToken, postId, batchSize)
-    } else if (platform === 'INSTAGRAM') {
-      comments = await metaAPI.getInstagramComments(accessToken, postId, batchSize)
-    } else {
-      throw new Error(`Unsupported platform: ${platform}`)
+    if (post.platform === Platform.FACEBOOK) {
+      // Fetch Facebook comments
+      const fbComments = await api.getPostComments(
+        post.externalId,
+        pageToken
+      )
+
+      comments = fbComments.map(comment => ({
+        postId: post.id,
+        platform: Platform.FACEBOOK,
+        externalId: comment.id,
+        parentExternalId: comment.parent?.id || null,
+        authorId: comment.from?.id || null,
+        authorName: comment.from?.name || null,
+        authorUsername: null,
+        message: comment.message,
+        createdTime: new Date(comment.created_time),
+        likeCount: comment.like_count || 0,
+        replyCount: 0 // Facebook doesn't provide reply count directly
+      }))
+
+    } else if (post.platform === Platform.INSTAGRAM) {
+      // Fetch Instagram comments
+      const igComments = await api.getInstagramComments(
+        post.externalId,
+        pageToken
+      )
+
+      comments = igComments.map(comment => ({
+        postId: post.id,
+        platform: Platform.INSTAGRAM,
+        externalId: comment.id,
+        parentExternalId: null, // Instagram API doesn't provide parent info in basic response
+        authorId: null, // Instagram doesn't provide author ID in comments
+        authorName: null,
+        authorUsername: comment.username,
+        message: comment.text,
+        createdTime: new Date(comment.timestamp),
+        likeCount: comment.like_count || 0,
+        replyCount: 0
+      }))
     }
 
-    // Process each comment
-    for (const comment of comments) {
-      try {
-        const commentText = comment.message || comment.text || ''
-        const authorName = comment.from.name || comment.from.username || 'Unknown'
-        const createdTime = comment.created_time || comment.timestamp
+    console.log(`Fetched ${comments.length} comments for post ${post.externalId}`)
 
-        if (!commentText.trim()) {
-          continue // Skip empty comments
+    // Upsert comments to database and enqueue sentiment analysis
+    const queue = JobQueue.getInstance()
+    
+    for (const commentData of comments) {
+      // Upsert comment
+      const comment = await prisma.comment.upsert({
+        where: {
+          externalId_platform: {
+            externalId: commentData.externalId,
+            platform: commentData.platform
+          }
+        },
+        update: {
+          likeCount: commentData.likeCount,
+          replyCount: commentData.replyCount,
+          fetchedAt: new Date()
+        },
+        create: {
+          ...commentData,
+          fetchedAt: new Date()
         }
+      })
 
-        // Check if comment already exists
-        const existingComment = await prisma.comment.findUnique({
-          where: { commentId: comment.id }
-        })
+      // Enqueue sentiment analysis job
+      await queue.enqueue(JobType.ANALYZE_SENTIMENT, {
+        commentId: comment.id
+      })
+    }
 
-        let commentRecord
-
-        if (existingComment) {
-          // Update existing comment
-          commentRecord = await prisma.comment.update({
-            where: { id: existingComment.id },
-            data: {
-              content: commentText,
-              authorName: authorName,
-              likeCount: comment.like_count || 0
-            }
-          })
-        } else {
-          // Create new comment
-          commentRecord = await prisma.comment.create({
-            data: {
-              commentId: comment.id,
-              postId: post.id,
-              pageId: page.id,
-              content: commentText,
-              authorName: authorName,
-              authorId: comment.from.id,
-              platform: platform as 'FACEBOOK' | 'INSTAGRAM',
-              createdTime: createdTime ? new Date(createdTime) : new Date(),
-              likeCount: comment.like_count || 0
-            }
-          })
-        }
-
-        // Queue sentiment analysis job for this comment
-        await jobQueue.addJob('ANALYZE_SENTIMENT', {
-          commentId: commentRecord.id,
-          pageId: page.id
-        }, {
-          priority: 'NORMAL',
-          delay: 500 // Small delay to avoid overwhelming the analysis system
-        })
-
-        result.commentsProcessed++
-        result.analysisJobsCreated++
-
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error processing comment'
-        console.error(`Error processing comment ${comment.id}:`, errorMessage)
-        result.errors.push(`Comment ${comment.id}: ${errorMessage}`)
+    // Update post comment count and last fetched timestamp
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        commentCount: comments.length,
+        lastFetchedAt: new Date()
       }
-    }
+    })
 
-    console.log(`Fetch comments completed for post ${postId}: ${result.commentsProcessed} comments processed`)
+    console.log(`Successfully processed ${comments.length} comments for post ${post.externalId}`)
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error in fetch comments'
-    console.error(`Fetch comments failed for post ${postId}:`, errorMessage)
-    result.errors.push(errorMessage)
+    console.error(`Error fetching comments for post ${postId}:`, error)
     throw error
   }
-
-  return result
 }
 

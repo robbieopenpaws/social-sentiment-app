@@ -1,162 +1,136 @@
-// src/app/(dashboard)/pages/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { 
   Plus, 
+  Settings, 
+  Trash2, 
   Facebook, 
-  Instagram, 
-  Users, 
-  Calendar,
-  BarChart3,
-  Settings,
-  Trash2,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle
+  Instagram,
+  Users,
+  MessageSquare,
+  TrendingUp,
+  RefreshCw
 } from 'lucide-react'
 
-interface Page {
+interface ConnectedPage {
   id: string
-  platform: 'FACEBOOK' | 'INSTAGRAM'
-  externalId: string
+  pageId: string
   name: string
-  pictureUrl?: string
+  platform: 'FACEBOOK' | 'INSTAGRAM'
   isActive: boolean
-  createdAt: string
-  updatedAt: string
-  _count?: {
-    posts: number
+  lastSync: string
+  stats: {
+    totalComments: number
+    totalPosts: number
+    avgSentiment: number
   }
 }
 
 export default function PagesPage() {
   const { data: session } = useSession()
-  const [pages, setPages] = useState<Page[]>([])
+  const [pages, setPages] = useState<ConnectedPage[]>([])
   const [loading, setLoading] = useState(true)
-  const [connectingPages, setConnectingPages] = useState(false)
-
-  useEffect(() => {
-    fetchPages()
-  }, [])
+  const [connecting, setConnecting] = useState(false)
 
   const fetchPages = async () => {
     try {
       const response = await fetch('/api/pages')
       if (response.ok) {
         const data = await response.json()
-        setPages(data.pages || [])
+        setPages(data)
       }
     } catch (error) {
-      console.error('Error fetching pages:', error)
+      console.error('Failed to fetch pages:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const connectPages = async () => {
-    setConnectingPages(true)
+  const handleConnectPages = async () => {
+    setConnecting(true)
     try {
-      const response = await fetch('/api/pages/connect', {
-        method: 'POST'
-      })
-      if (response.ok) {
-        await fetchPages()
-      }
+      // This would trigger the Facebook OAuth flow
+      // For now, we'll simulate the connection
+      console.log('Connecting to Facebook pages...')
+      
+      // In a real implementation, this would:
+      // 1. Redirect to Facebook OAuth
+      // 2. Get user permission for pages
+      // 3. Store page tokens
+      // 4. Refresh the page list
+      
+      setTimeout(() => {
+        fetchPages()
+        setConnecting(false)
+      }, 2000)
     } catch (error) {
-      console.error('Error connecting pages:', error)
-    } finally {
-      setConnectingPages(false)
+      console.error('Failed to connect pages:', error)
+      setConnecting(false)
     }
   }
 
-  const togglePageStatus = async (pageId: string, isActive: boolean) => {
+  const handleTogglePage = async (pageId: string, isActive: boolean) => {
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !isActive })
       })
+      
       if (response.ok) {
-        await fetchPages()
+        fetchPages()
       }
     } catch (error) {
-      console.error('Error updating page status:', error)
+      console.error('Failed to toggle page:', error)
     }
   }
 
-  const deletePage = async (pageId: string) => {
-    if (!confirm('Are you sure you want to remove this page? This will also delete all associated data.')) {
-      return
-    }
-
+  const handleDeletePage = async (pageId: string) => {
+    if (!confirm('Are you sure you want to disconnect this page?')) return
+    
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
         method: 'DELETE'
       })
+      
       if (response.ok) {
-        await fetchPages()
+        fetchPages()
       }
     } catch (error) {
-      console.error('Error deleting page:', error)
+      console.error('Failed to delete page:', error)
     }
   }
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'FACEBOOK':
-        return <Facebook className="h-5 w-5 text-blue-600" />
-      case 'INSTAGRAM':
-        return <Instagram className="h-5 w-5 text-pink-600" />
-      default:
-        return <Users className="h-5 w-5 text-gray-600" />
+  const handleSyncPage = async (pageId: string) => {
+    try {
+      const response = await fetch('/api/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId })
+      })
+      
+      if (response.ok) {
+        // Show success message or update UI
+        console.log('Sync triggered for page:', pageId)
+      }
+    } catch (error) {
+      console.error('Failed to sync page:', error)
     }
   }
 
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'FACEBOOK':
-        return 'bg-blue-100 text-blue-800'
-      case 'INSTAGRAM':
-        return 'bg-pink-100 text-pink-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  useEffect(() => {
+    fetchPages()
+  }, [])
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-          </div>
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -166,122 +140,100 @@ export default function PagesPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Connected Pages</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-gray-900">Connected Pages</h1>
+          <p className="text-gray-600">
             Manage your Facebook and Instagram pages for sentiment analysis
           </p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Connect Pages
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Connect Social Media Pages</DialogTitle>
-              <DialogDescription>
-                Connect your Facebook Pages and Instagram Business accounts to start analyzing comments.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                <p>To connect pages, you'll need:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Admin access to Facebook Pages</li>
-                  <li>Instagram Business accounts linked to Facebook Pages</li>
-                  <li>Appropriate permissions for reading posts and comments</li>
-                </ul>
-              </div>
-              <Button 
-                onClick={connectPages} 
-                disabled={connectingPages}
-                className="w-full"
-              >
-                {connectingPages ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Facebook className="mr-2 h-4 w-4" />
-                    Connect with Facebook
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={handleConnectPages} 
+          disabled={connecting}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {connecting ? 'Connecting...' : 'Connect Pages'}
+        </Button>
       </div>
 
       {/* Pages Grid */}
       {pages.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {pages.map((page) => (
-            <Card key={page.id} className={`transition-all ${page.isActive ? 'border-green-200' : 'border-gray-200'}`}>
+            <Card key={page.id} className={`${!page.isActive ? 'opacity-60' : ''}`}>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    {getPlatformIcon(page.platform)}
-                    <Badge variant="secondary" className={getPlatformColor(page.platform)}>
-                      {page.platform}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {page.isActive ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    {page.platform === 'FACEBOOK' ? (
+                      <Facebook className="h-5 w-5 text-blue-600" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-yellow-500" />
+                      <Instagram className="h-5 w-5 text-pink-600" />
                     )}
+                    <div>
+                      <CardTitle className="text-lg">{page.name}</CardTitle>
+                      <CardDescription className="text-sm">
+                        {page.platform.toLowerCase()} page
+                      </CardDescription>
+                    </div>
                   </div>
+                  <Badge variant={page.isActive ? 'default' : 'secondary'}>
+                    {page.isActive ? 'Active' : 'Paused'}
+                  </Badge>
                 </div>
-                <CardTitle className="text-lg">{page.name}</CardTitle>
-                <CardDescription>
-                  {page.isActive ? 'Active' : 'Inactive'} • Connected {new Date(page.createdAt).toLocaleDateString()}
-                </CardDescription>
               </CardHeader>
+              
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Posts analyzed:</span>
-                  <span className="font-medium">{page._count?.posts || 0}</span>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Last updated:</span>
-                  <span className="font-medium">
-                    {new Date(page.updatedAt).toLocaleDateString()}
-                  </span>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {page.stats.totalPosts}
+                    </div>
+                    <div className="text-xs text-gray-500">Posts</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {page.stats.totalComments}
+                    </div>
+                    <div className="text-xs text-gray-500">Comments</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {page.stats.avgSentiment.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-500">Avg Score</div>
+                  </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                {/* Last Sync */}
+                <div className="text-xs text-gray-500 text-center">
+                  Last synced: {new Date(page.lastSync).toLocaleDateString()}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => togglePageStatus(page.id, page.isActive)}
+                    onClick={() => handleSyncPage(page.id)}
+                    className="flex-1"
                   >
-                    {page.isActive ? 'Deactivate' : 'Activate'}
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Sync
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleTogglePage(page.id, page.isActive)}
                   >
-                    <BarChart3 className="h-4 w-4" />
+                    {page.isActive ? 'Pause' : 'Resume'}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deletePage(page.id)}
+                    onClick={() => handleDeletePage(page.id)}
                     className="text-red-600 hover:text-red-700"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </CardContent>
@@ -289,59 +241,83 @@ export default function PagesPage() {
           ))}
         </div>
       ) : (
+        /* Empty State */
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No pages connected</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Connect your Facebook Pages and Instagram Business accounts to start analyzing sentiment in comments.
-            </p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Connect Your First Page
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center gap-4 mb-4">
+                <Facebook className="h-12 w-12 text-blue-600 opacity-50" />
+                <Instagram className="h-12 w-12 text-pink-600 opacity-50" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                No Pages Connected
+              </h3>
+              <p className="text-gray-600 max-w-md">
+                Connect your Facebook Pages and Instagram Business accounts to start 
+                analyzing sentiment in your social media comments.
+              </p>
+              <div className="pt-4">
+                <Button onClick={handleConnectPages} disabled={connecting}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {connecting ? 'Connecting...' : 'Connect Your First Page'}
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Connect Social Media Pages</DialogTitle>
-                  <DialogDescription>
-                    Connect your Facebook Pages and Instagram Business accounts to start analyzing comments.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    <p>To connect pages, you'll need:</p>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>Admin access to Facebook Pages</li>
-                      <li>Instagram Business accounts linked to Facebook Pages</li>
-                      <li>Appropriate permissions for reading posts and comments</li>
-                    </ul>
-                  </div>
-                  <Button 
-                    onClick={connectPages} 
-                    disabled={connectingPages}
-                    className="w-full"
-                  >
-                    {connectingPages ? (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <Facebook className="mr-2 h-4 w-4" />
-                        Connect with Facebook
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Help Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Getting Started
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center gap-2">
+                <Facebook className="h-4 w-4 text-blue-600" />
+                Facebook Pages
+              </h4>
+              <p className="text-sm text-gray-600">
+                Connect your Facebook Pages to analyze comments and posts. 
+                You&apos;ll need admin access to the pages you want to connect.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center gap-2">
+                <Instagram className="h-4 w-4 text-pink-600" />
+                Instagram Business
+              </h4>
+              <p className="text-sm text-gray-600">
+                Connect Instagram Business accounts linked to your Facebook Pages. 
+                Personal Instagram accounts are not supported.
+              </p>
+            </div>
+          </div>
+          
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-2">Required Permissions</h4>
+            <div className="grid gap-2 md:grid-cols-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Users className="h-3 w-3" />
+                pages_show_list
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-3 w-3" />
+                pages_read_engagement
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-3 w-3" />
+                pages_read_user_content
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
