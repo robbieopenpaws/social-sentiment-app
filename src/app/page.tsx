@@ -3,17 +3,6 @@
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  BarChart3, 
-  MessageSquare, 
-  TrendingUp, 
-  Users, 
-  Facebook,
-  Shield,
-  Zap
-} from 'lucide-react'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -27,8 +16,13 @@ export default function HomePage() {
 
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Loading...</div>
       </div>
     )
   }
@@ -38,143 +32,125 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '2rem'
+    }}>
+      <div style={{ 
+        maxWidth: '800px', 
+        margin: '0 auto', 
+        textAlign: 'center',
+        color: 'white'
+      }}>
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Social Sentiment Analytics
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Harness the power of AI to analyze sentiment across your social media platforms. 
-            Get deep insights into how your audience feels about your content.
-          </p>
-          <Button 
-            onClick={() => signIn('facebook')}
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-          >
-            <Facebook className="h-5 w-5 mr-2" />
-            Get Started with Facebook
-          </Button>
-        </div>
+        <h1 style={{ 
+          fontSize: '3rem', 
+          fontWeight: 'bold', 
+          marginBottom: '1rem' 
+        }}>
+          Social Sentiment Analytics
+        </h1>
+        
+        <p style={{ 
+          fontSize: '1.2rem', 
+          marginBottom: '3rem',
+          opacity: 0.9
+        }}>
+          Harness the power of AI to analyze sentiment across your social media platforms. 
+          Get deep insights into how your audience feels about your content.
+        </p>
+
+        {/* Login Button */}
+        <button 
+          onClick={() => signIn('facebook')}
+          style={{
+            backgroundColor: '#1877f2',
+            color: 'white',
+            border: 'none',
+            padding: '1rem 2rem',
+            fontSize: '1.1rem',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            marginBottom: '3rem'
+          }}
+        >
+          🔗 Get Started with Facebook
+        </button>
 
         {/* Features */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-16">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
-                Comment Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Automatically analyze sentiment in comments across Facebook and Instagram posts. 
-                Understand what your audience really thinks.
-              </CardDescription>
-            </CardContent>
-          </Card>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '2rem',
+          marginTop: '3rem'
+        }}>
+          <div style={{ 
+            backgroundColor: 'rgba(255,255,255,0.1)', 
+            padding: '1.5rem', 
+            borderRadius: '8px' 
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>💬 Comment Analysis</h3>
+            <p style={{ opacity: 0.9 }}>
+              Automatically analyze sentiment in comments across Facebook and Instagram posts.
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-                Real-time Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Get instant sentiment analysis with detailed breakdowns of positive, 
-                negative, and neutral feedback on your content.
-              </CardDescription>
-            </CardContent>
-          </Card>
+          <div style={{ 
+            backgroundColor: 'rgba(255,255,255,0.1)', 
+            padding: '1.5rem', 
+            borderRadius: '8px' 
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>📈 Real-time Insights</h3>
+            <p style={{ opacity: 0.9 }}>
+              Get instant sentiment analysis with detailed breakdowns of positive, negative, and neutral feedback.
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-                Data Visualization
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Beautiful charts and graphs help you visualize sentiment trends 
-                and track changes over time.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-orange-600" />
-                Multi-Platform
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Connect multiple Facebook Pages and Instagram Business accounts 
-                to analyze all your social media in one place.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-red-600" />
-                Toxicity Detection
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Advanced AI models detect toxic comments and harmful content, 
-                helping you maintain a positive community.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-6 w-6 text-yellow-600" />
-                Export & Reports
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Export your data in multiple formats (CSV, JSON, Excel) and 
-                generate comprehensive reports for stakeholders.
-              </CardDescription>
-            </CardContent>
-          </Card>
+          <div style={{ 
+            backgroundColor: 'rgba(255,255,255,0.1)', 
+            padding: '1.5rem', 
+            borderRadius: '8px' 
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>📊 Data Visualization</h3>
+            <p style={{ opacity: 0.9 }}>
+              Beautiful charts and graphs help you visualize sentiment trends over time.
+            </p>
+          </div>
         </div>
 
-        {/* CTA Section */}
-        <div className="text-center">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-2xl">Ready to Get Started?</CardTitle>
-              <CardDescription className="text-lg">
-                Connect your Facebook account to begin analyzing your social media sentiment
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => signIn('facebook')}
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
-              >
-                <Facebook className="h-5 w-5 mr-2" />
-                Connect Facebook Account
-              </Button>
-              <p className="text-sm text-gray-500 mt-4">
-                We only access your pages and their public comments. Your data is secure and private.
-              </p>
-            </CardContent>
-          </Card>
+        {/* CTA */}
+        <div style={{ 
+          marginTop: '3rem',
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          padding: '2rem',
+          borderRadius: '12px'
+        }}>
+          <h2 style={{ marginBottom: '1rem' }}>Ready to Get Started?</h2>
+          <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+            Connect your Facebook account to begin analyzing your social media sentiment
+          </p>
+          <button 
+            onClick={() => signIn('facebook')}
+            style={{
+              backgroundColor: '#1877f2',
+              color: 'white',
+              border: 'none',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            🔗 Connect Facebook Account
+          </button>
+          <p style={{ 
+            fontSize: '0.9rem', 
+            marginTop: '1rem', 
+            opacity: 0.7 
+          }}>
+            We only access your pages and their public comments. Your data is secure and private.
+          </p>
         </div>
       </div>
     </div>
