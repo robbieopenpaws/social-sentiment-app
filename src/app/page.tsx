@@ -1,154 +1,85 @@
-'use client'
-
-import { useSession, signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+// src/app/page.tsx - Updated for NextAuth v5
+import { signIn } from "@/auth"
 
 export default function HomePage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (session) {
-      router.push('/dashboard')
-    }
-  }, [session, router])
-
-  if (status === 'loading') {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh' 
-      }}>
-        <div>Loading...</div>
-      </div>
-    )
-  }
-
-  if (session) {
-    return null // Will redirect to dashboard
-  }
-
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2rem'
-    }}>
-      <div style={{ 
-        maxWidth: '800px', 
-        margin: '0 auto', 
-        textAlign: 'center',
-        color: 'white'
-      }}>
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800">
+      <div className="container mx-auto px-4 py-16">
         {/* Header */}
-        <h1 style={{ 
-          fontSize: '3rem', 
-          fontWeight: 'bold', 
-          marginBottom: '1rem' 
-        }}>
-          Social Sentiment Analytics
-        </h1>
-        
-        <p style={{ 
-          fontSize: '1.2rem', 
-          marginBottom: '3rem',
-          opacity: 0.9
-        }}>
-          Harness the power of AI to analyze sentiment across your social media platforms. 
-          Get deep insights into how your audience feels about your content.
-        </p>
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-white mb-6">
+            Social Sentiment Analytics
+          </h1>
+          <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+            Harness the power of AI to analyze sentiment across your social media platforms. 
+            Get deep insights into how your audience feels about your content.
+          </p>
+          
+          {/* CTA Button */}
+          <form
+            action={async () => {
+              "use server"
+              await signIn("facebook", { redirectTo: "/dashboard" })
+            }}
+          >
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+            >
+              🔗 Get Started with Facebook
+            </button>
+          </form>
+        </div>
 
-        {/* Login Button */}
-        <button 
-          onClick={() => signIn('facebook')}
-          style={{
-            backgroundColor: '#1877f2',
-            color: 'white',
-            border: 'none',
-            padding: '1rem 2rem',
-            fontSize: '1.1rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            marginBottom: '3rem'
-          }}
-        >
-          🔗 Get Started with Facebook
-        </button>
-
-        {/* Features */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '2rem',
-          marginTop: '3rem'
-        }}>
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.1)', 
-            padding: '1.5rem', 
-            borderRadius: '8px' 
-          }}>
-            <h3 style={{ marginBottom: '1rem' }}>💬 Comment Analysis</h3>
-            <p style={{ opacity: 0.9 }}>
+        {/* Features Grid */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
+            <div className="text-4xl mb-4">💬</div>
+            <h3 className="text-xl font-semibold mb-3">Comment Analysis</h3>
+            <p className="text-blue-100">
               Automatically analyze sentiment in comments across Facebook and Instagram posts.
             </p>
           </div>
-
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.1)', 
-            padding: '1.5rem', 
-            borderRadius: '8px' 
-          }}>
-            <h3 style={{ marginBottom: '1rem' }}>📈 Real-time Insights</h3>
-            <p style={{ opacity: 0.9 }}>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
+            <div className="text-4xl mb-4">📈</div>
+            <h3 className="text-xl font-semibold mb-3">Real-time Insights</h3>
+            <p className="text-blue-100">
               Get instant sentiment analysis with detailed breakdowns of positive, negative, and neutral feedback.
             </p>
           </div>
-
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.1)', 
-            padding: '1.5rem', 
-            borderRadius: '8px' 
-          }}>
-            <h3 style={{ marginBottom: '1rem' }}>📊 Data Visualization</h3>
-            <p style={{ opacity: 0.9 }}>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
+            <div className="text-4xl mb-4">📊</div>
+            <h3 className="text-xl font-semibold mb-3">Data Visualization</h3>
+            <p className="text-blue-100">
               Beautiful charts and graphs help you visualize sentiment trends over time.
             </p>
           </div>
         </div>
 
-        {/* CTA */}
-        <div style={{ 
-          marginTop: '3rem',
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          padding: '2rem',
-          borderRadius: '12px'
-        }}>
-          <h2 style={{ marginBottom: '1rem' }}>Ready to Get Started?</h2>
-          <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+        {/* Bottom CTA */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+          <p className="text-blue-100 mb-6">
             Connect your Facebook account to begin analyzing your social media sentiment
           </p>
-          <button 
-            onClick={() => signIn('facebook')}
-            style={{
-              backgroundColor: '#1877f2',
-              color: 'white',
-              border: 'none',
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              borderRadius: '8px',
-              cursor: 'pointer'
+          
+          <form
+            action={async () => {
+              "use server"
+              await signIn("facebook", { redirectTo: "/dashboard" })
             }}
           >
-            🔗 Connect Facebook Account
-          </button>
-          <p style={{ 
-            fontSize: '0.9rem', 
-            marginTop: '1rem', 
-            opacity: 0.7 
-          }}>
+            <button
+              type="submit"
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+            >
+              🔗 Connect Facebook Account
+            </button>
+          </form>
+          
+          <p className="text-sm text-blue-200 mt-4">
             We only access your pages and their public comments. Your data is secure and private.
           </p>
         </div>
