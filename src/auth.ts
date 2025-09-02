@@ -29,15 +29,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token
     },
-   async session({ session, token }) {
-  // Send properties to the client
-  return {
-    ...session,
-    accessToken: token.accessToken as string,
-    refreshToken: token.refreshToken as string,
-    expiresAt: token.expiresAt as number
-  }
-}
+    async session({ session, token }) {
+      // Send properties to the client by returning a new object
+      return {
+        ...session,
+        ...(token.accessToken && { accessToken: token.accessToken as string }),
+        ...(token.refreshToken && { refreshToken: token.refreshToken as string }),
+        ...(token.expiresAt && { expiresAt: token.expiresAt as number }),
+      }
+    }
+  },
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
