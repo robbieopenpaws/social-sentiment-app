@@ -31,12 +31,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       // Send properties to the client by returning a new object
-      return {
+      const result = { 
         ...session,
-        ...(token.accessToken && { accessToken: token.accessToken as string }),
-        ...(token.refreshToken && { refreshToken: token.refreshToken as string }),
-        ...(token.expiresAt && { expiresAt: token.expiresAt as number }),
+        accessToken: undefined as string | undefined,
+        refreshToken: undefined as string | undefined,
+        expiresAt: undefined as number | undefined
       }
+      
+      if (token.accessToken) {
+        result.accessToken = token.accessToken as string
+      }
+      if (token.refreshToken) {
+        result.refreshToken = token.refreshToken as string
+      }
+      if (token.expiresAt) {
+        result.expiresAt = token.expiresAt as number
+      }
+      
+      return result
     }
   },
   pages: {
