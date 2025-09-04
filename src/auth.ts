@@ -9,15 +9,15 @@ const prisma = new PrismaClient()
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    Facebook({
-      clientId: process.env.FACEBOOK_APP_ID!,
-      clientSecret: process.env.FACEBOOK_APP_SECRET!,
-      authorization: {
-        params: {
-          scope: "email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic,instagram_manage_comments"
-        }
-      }
-    })
+Facebook({
+  clientId: process.env.FACEBOOK_APP_ID!,
+  clientSecret: process.env.FACEBOOK_APP_SECRET!,
+  authorization: {
+    params: {
+      scope: "email,public_profile"
+    }
+  }
+})
   ],
   callbacks: {
     async jwt({ token, account }) {
