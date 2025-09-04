@@ -19,7 +19,7 @@ export default function HomePage() {
           <form
             action={async () => {
               "use server"
-              await signIn("facebook", { redirectTo: "/dashboard" })
+              await signIn("facebook-business", { redirectTo: "/dashboard" })
             }}
           >
             <button
