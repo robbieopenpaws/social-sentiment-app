@@ -1,13 +1,8 @@
-// auth.ts - NextAuth v5 configuration
+// auth.ts - NextAuth v5 configuration (No Database)
 import NextAuth from "next-auth"
 import Facebook from "next-auth/providers/facebook"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
   providers: [
     Facebook({
       clientId: process.env.FACEBOOK_APP_ID!,
