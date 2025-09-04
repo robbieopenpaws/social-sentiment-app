@@ -16,12 +16,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         url: "https://www.facebook.com/v19.0/dialog/oauth",
         params: {
           config_id: "2124466384625774",
-          response_type: "code",
-          override_default_response_type: "true"
+          response_type: "code"
         }
       },
       token: "https://graph.facebook.com/v19.0/oauth/access_token",
-      userinfo: "https://graph.facebook.com/me?fields=id,name,email",
+      userinfo: {
+        url: "https://graph.facebook.com/me",
+        params: {
+          fields: "id,name,email"
+        }
+      },
       clientId: process.env.FACEBOOK_APP_ID,
       clientSecret: process.env.FACEBOOK_APP_SECRET,
       profile(profile) {
