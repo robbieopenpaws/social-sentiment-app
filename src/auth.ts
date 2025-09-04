@@ -1,8 +1,11 @@
+// auth.ts - NextAuth v5 configuration
 import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import { PrismaClient } from "@prisma/client"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const prisma = new PrismaClient()
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     {
@@ -12,7 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         url: "https://www.facebook.com/v19.0/dialog/oauth",
         params: {
-          config_id: "2124466384625774", // Your Configuration ID
+          config_id: "2124466384625774",
           response_type: "code",
           override_default_response_type: "true"
         }
@@ -41,12 +44,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      return {
+      const result = { 
         ...session,
-        accessToken: token.accessToken as string,
-        refreshToken: token.refreshToken as string,
-        expiresAt: token.expiresAt as number
+        accessToken: undefined as string | undefined,
+        refreshToken: undefined as string | undefined,
+        expiresAt: undefined as number | undefined
       }
+      
+      if (token.accessToken) {
+        result.accessToken = token.accessToken as string
+      }
+      if (token.refreshToken) {
+        result.refreshToken = token.refreshToken as string
+      }
+      if (token.expiresAt) {
+        result.expiresAt = token.expiresAt as number
+      }
+      
+      return result
     }
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+  session: {
+    strategy: "jwt",
   }
 })
