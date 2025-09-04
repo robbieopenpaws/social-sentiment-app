@@ -9,17 +9,20 @@ export default function TestPage() {
   const [loading, setLoading] = useState(false)
 
   const runTest = async (testName: string, url: string) => {
-    if (!session?.accessToken) {
+    // Cast session to any to access accessToken
+    const sessionWithToken = session as any
+    
+    if (!sessionWithToken?.accessToken) {
       alert('No access token found. Please log in with Facebook first.')
       return
     }
 
     setLoading(true)
     try {
-      const response = await fetch(`${url}?access_token=${session.accessToken}`)
+      const response = await fetch(`${url}?access_token=${sessionWithToken.accessToken}`)
       const data = await response.json()
       
-      setResults(prev => ({
+      setResults((prev: any) => ({
         ...prev,
         [testName]: {
           success: response.ok,
@@ -27,8 +30,8 @@ export default function TestPage() {
           status: response.status
         }
       }))
-    } catch (error) {
-      setResults(prev => ({
+    } catch (error: any) {
+      setResults((prev: any) => ({
         ...prev,
         [testName]: {
           success: false,
