@@ -46,9 +46,12 @@ export default function TestPage() {
 const runAllTests = async () => {
   await runTest('profile', 'https://graph.facebook.com/me')
   await runTest('pages', 'https://graph.facebook.com/me/accounts')
-  await runTest('page_info', 'https://graph.facebook.com/me?fields=id,name,accounts{id,name,access_token}')
-  await runTest('page_metadata', 'https://graph.facebook.com/me/accounts?fields=id,name,category,about,description')
-  await runTest('token_permissions', 'https://graph.facebook.com/me/permissions')
+  await runTest('permissions', 'https://graph.facebook.com/me/permissions')
+  
+  // New specific page tests:
+  await runTest('specific_page_basic', 'https://graph.facebook.com/554024238384285')
+  await runTest('specific_page_fields', 'https://graph.facebook.com/554024238384285?fields=id,name,about,category')
+  await runTest('page_posts', 'https://graph.facebook.com/554024238384285/posts?limit=5')
 }
 
   if (!session) {
@@ -101,6 +104,31 @@ const runAllTests = async () => {
 >
   Test 4: Page Metadata
 </button>
+<button 
+  onClick={() => runTest('specific_page_basic', 'https://graph.facebook.com/554024238384285')}
+  disabled={loading}
+  className="block w-full text-left p-4 border rounded-lg hover:bg-gray-50"
+>
+  Test 3: Specific Page Basic
+</button>
+
+<button 
+  onClick={() => runTest('specific_page_fields', 'https://graph.facebook.com/554024238384285?fields=id,name,about,category')}
+  disabled={loading}
+  className="block w-full text-left p-4 border rounded-lg hover:bg-gray-50"
+>
+  Test 4: Specific Page Metadata
+</button>
+
+<button 
+  onClick={() => runTest('page_posts', 'https://graph.facebook.com/554024238384285/posts?limit=5')}
+  disabled={loading}
+  className="block w-full text-left p-4 border rounded-lg hover:bg-gray-50"
+>
+  Test 5: Page Posts
+</button>
+      
+      
       </div>
 
       {Object.keys(results).length > 0 && (
