@@ -1,21 +1,28 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useState, useEffect } from 'react'
-import { MagnifyingGlassIcon, ChatBubbleLeftRightIcon, HeartIcon } from '@heroicons/react/24/outline'
+
+const SearchIcon = () => (
+  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+)
+
+const ChatIcon = () => (
+  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
+)
 
 export default function ExplorerPage() {
   const { data: session } = useSession()
-  const [selectedPage, setSelectedPage] = useState<string>('')
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(false)
 
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
           <div className="text-center">
-            <MagnifyingGlassIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <SearchIcon />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Explore Content</h1>
             <p className="text-gray-600 mb-6">Please log in with Facebook to explore your page content.</p>
           </div>
@@ -37,7 +44,7 @@ export default function ExplorerPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12">
           <div className="text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ChatBubbleLeftRightIcon className="w-8 h-8 text-blue-600" />
+              <ChatIcon />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">Content Explorer Coming Soon</h3>
             <p className="text-gray-600 mb-6">
