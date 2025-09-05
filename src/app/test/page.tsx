@@ -48,6 +48,7 @@ const runAllTests = async () => {
   await runTest('pages', 'https://graph.facebook.com/me/accounts')
   await runTest('page_info', 'https://graph.facebook.com/me?fields=id,name,accounts{id,name,access_token}')
   await runTest('page_metadata', 'https://graph.facebook.com/me/accounts?fields=id,name,category,about,description')
+  await runTest('token_permissions', 'https://graph.facebook.com/me/permissions')
 }
 
   if (!session) {
