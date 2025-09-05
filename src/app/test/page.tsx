@@ -43,10 +43,12 @@ export default function TestPage() {
     setLoading(false)
   }
 
-  const runAllTests = async () => {
-    await runTest('profile', 'https://graph.facebook.com/me')
-    await runTest('pages', 'https://graph.facebook.com/me/accounts')
-  }
+const runAllTests = async () => {
+  await runTest('profile', 'https://graph.facebook.com/me')
+  await runTest('pages', 'https://graph.facebook.com/me/accounts')
+  await runTest('page_info', 'https://graph.facebook.com/me?fields=id,name,accounts{id,name,access_token}')
+  await runTest('page_metadata', 'https://graph.facebook.com/me/accounts?fields=id,name,category,about,description')
+}
 
   if (!session) {
     return <div className="p-8">Please log in with Facebook first.</div>
@@ -82,6 +84,22 @@ export default function TestPage() {
         >
           Test 2: Pages List
         </button>
+
+        <button 
+  onClick={() => runTest('page_info', 'https://graph.facebook.com/me?fields=id,name,accounts{id,name,access_token}')}
+  disabled={loading}
+  className="block w-full text-left p-4 border rounded-lg hover:bg-gray-50"
+>
+  Test 3: Page Info with Fields
+</button>
+
+<button 
+  onClick={() => runTest('page_metadata', 'https://graph.facebook.com/me/accounts?fields=id,name,category,about,description')}
+  disabled={loading}
+  className="block w-full text-left p-4 border rounded-lg hover:bg-gray-50"
+>
+  Test 4: Page Metadata
+</button>
       </div>
 
       {Object.keys(results).length > 0 && (
