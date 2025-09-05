@@ -2,8 +2,6 @@
 
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { CheckCircleIcon, PlusCircleIcon } from '@heroicons/react/24/solid'
-import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 interface FacebookPage {
   id: string
@@ -12,6 +10,37 @@ interface FacebookPage {
   category?: string
   tasks?: string[]
 }
+
+// Built-in SVG Icons
+const CheckIcon = () => (
+  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+  </svg>
+)
+
+const RefreshIcon = ({ spinning = false }: { spinning?: boolean }) => (
+  <svg className={`w-4 h-4 ${spinning ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+)
+
+const WarningIcon = () => (
+  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+  </svg>
+)
+
+const FacebookIcon = () => (
+  <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+  </svg>
+)
+
+const CheckCircleIcon = () => (
+  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+  </svg>
+)
 
 export default function PagesPage() {
   const { data: session } = useSession()
@@ -67,9 +96,7 @@ export default function PagesPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
+              <FacebookIcon />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Pages</h1>
             <p className="text-gray-600 mb-6">Please log in with Facebook to manage your pages and start analyzing sentiment.</p>
@@ -97,7 +124,7 @@ export default function PagesPage() {
               disabled={loading}
               className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshIcon spinning={loading} />
               Refresh
             </button>
           </div>
@@ -108,7 +135,7 @@ export default function PagesPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <ArrowPathIcon className="w-8 h-8 text-blue-600 animate-spin" />
+                <RefreshIcon spinning={true} />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Your Pages</h3>
               <p className="text-gray-600">Connecting to Facebook and fetching your pages...</p>
@@ -121,7 +148,7 @@ export default function PagesPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-red-200 p-6 mb-6">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+                <WarningIcon />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-red-900 mb-2">Unable to Load Pages</h3>
@@ -142,7 +169,7 @@ export default function PagesPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12">
             <div className="text-center max-w-md mx-auto">
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ExclamationTriangleIcon className="w-8 h-8 text-yellow-600" />
+                <WarningIcon />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">No Pages Found</h3>
               <p className="text-gray-600 mb-6">
@@ -222,9 +249,7 @@ export default function PagesPage() {
                         ? 'bg-blue-600 border-blue-600'
                         : 'border-gray-300 group-hover:border-gray-400'
                     }`}>
-                      {isSelected && (
-                        <CheckCircleIcon className="w-4 h-4 text-white" />
-                      )}
+                      {isSelected && <CheckIcon />}
                     </div>
 
                     <div className="p-6">
@@ -271,7 +296,7 @@ export default function PagesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                      <CheckCircleIcon />
                     </div>
                     <div>
                       <h3 className="font-semibold text-green-900">
