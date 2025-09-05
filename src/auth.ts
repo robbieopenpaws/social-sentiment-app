@@ -16,7 +16,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account }) {
-      // Persist the OAuth access_token to the token right after signin
       if (account) {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
@@ -25,7 +24,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      // Send properties to the client by returning a new object
       const result = { 
         ...session,
         accessToken: undefined as string | undefined,
