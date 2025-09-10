@@ -1,0 +1,267 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts Account[]
+  pages    Page[]
+
+  @@map("users")
+}
+
+// NextAuth account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// NextAuth session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// NextAuth verification token model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+// Social media pages (Facebook/Instagram)
+model Page {
+  id              String   @id @default(cuid())
+  platform        Platform
+  externalId      String   // Facebook Page ID or Instagram Business Account ID
+  name            String
+  pictureUrl      String?
+  ownerUserId     String
+  pageAccessToken String   // Encrypted token
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  owner User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  posts Post[]
+
+  @@unique([externalId, platform])
+  @@index([ownerUserId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("pages")
+}
+
+// Social media posts
+model Post {
+  id            String    @id @default(cuid())
+  pageId        String
+  platform      Platform
+  externalId    String    // Facebook Post ID or Instagram Media ID
+  message       String?    // Facebook post message
+  caption       String?    // Instagram caption
+  createdTime   DateTime
+  permalinkUrl  String?
+  likeCount     Int       @default(0)
+  commentCount  Int       @default(0)
+  fetchedAt     DateTime  @default(now())
+  lastFetchedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  page     Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  comments Comment[]
+
+  @@unique([externalId, platform])
+  @@index([pageId])
+  @@index([platform])
+  @@index([createdTime])
+  @@index([fetchedAt])
+  @@map("posts")
+}
+
+// Social media comments
+model Comment {
+  id                String    @id @default(cuid())
+  postId            String
+  platform          Platform
+  externalId        String    // Facebook Comment ID or Instagram Comment ID
+  parentExternalId  String?   // For nested comments/replies
+  authorId          String?   // External author ID
+  authorName        String?
+  authorUsername    String?   // Instagram username
+  message           String    
+  createdTime       DateTime
+  likeCount         Int       @default(0)
+  replyCount        Int       @default(0)
+  fetchedAt         DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  post     Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  analysis Analysis[]
+
+  @@unique([externalId, platform])
+  @@index([postId])
+  @@index([platform])
+  @@index([createdTime])
+  @@index([authorId])
+  @@index([parentExternalId])
+  @@map("comments")
+}
+
+// Sentiment and toxicity analysis results
+model Analysis {
+  id              String      @id @default(cuid())
+  commentId       String
+  language        String?     // Detected language code (e.g., 'en', 'es')
+  sentimentLabel  Sentiment
+  sentimentScore  Float       // Confidence score 0-1
+  toxicityScore   Float       // Toxicity score 0-1
+  keywords        Json?       // Array of extracted keywords/topics
+  claims          Json?       // Array of claims referenced from content
+  factualAccuracy String?     // "True", "False", "Misleading", "Unverified"
+  modelName       String      // Name/version of the analysis model used
+  modelVersion    String?     // Version of the model
+  analyzedAt      DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([sentimentLabel])
+  @@index([analyzedAt])
+  @@index([modelName])
+  @@map("analyses")
+}
+
+// Background job queue
+model Job {
+  id          String    @id @default(cuid())
+  type        JobType
+  status      JobStatus @default(QUEUED)
+  payload     Json      // Job parameters and data
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  lastError   String?   
+  scheduledAt DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("jobs")
+}
+
+// Data retention and privacy settings
+model DataRetention {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  retentionDays   Int      @default(365) // Days to keep data
+  autoDelete      Boolean  @default(false)
+  lastCleanupAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([autoDelete])
+  @@map("data_retention")
+}
+
+// Audit log for data access and operations
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // Action performed
+  resource  String   // Resource affected
+  details   Json?    // Additional details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Enums
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum Sentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+enum JobType {
+  FETCH_POSTS
+  FETCH_COMMENTS
+  ANALYZE_SENTIMENT
+  CLEANUP_DATA
+  REFRESH_TOKENS
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
