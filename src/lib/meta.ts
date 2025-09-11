@@ -152,7 +152,7 @@ export class MetaGraphAPI {
   // Generic API request with retry logic
   private async makeRequest<T>(
     endpoint: string,
-    params: Record<string, any> = {},
+    params: Record<string, string | number | boolean> = {},
     maxRetries: number = 3
   ): Promise<T> {
     await this.rateLimiter.checkLimit()
@@ -234,7 +234,7 @@ export class MetaGraphAPI {
     let nextUrl: string | undefined
 
     do {
-      const params: Record<string, any> = {
+      const params: Record<string, string | number> = {
         fields: 'id,message,created_time,permalink_url,likes.summary(true),comments.summary(true)',
         limit
       }
@@ -310,7 +310,7 @@ export class MetaGraphAPI {
     let nextUrl: string | undefined
 
     do {
-      const params: Record<string, any> = {
+      const params: Record<string, string | number> = {
         fields: 'id,caption,timestamp,permalink,like_count,comments_count',
         limit
       }
@@ -366,7 +366,18 @@ export class MetaGraphAPI {
   }
 
   // Debug token info
-  async getTokenInfo(): Promise<any> {
+  async getTokenInfo(): Promise<{
+    data: {
+      app_id: string
+      type: string
+      application: string
+      data_access_expires_at: number
+      expires_at: number
+      is_valid: boolean
+      scopes: string[]
+      user_id: string
+    }
+  }> {
     return await this.makeRequest('/debug_token', {
       input_token: this.accessToken
     })

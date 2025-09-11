@@ -3,17 +3,16 @@ import { PrismaClient, JobType, JobStatus } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export interface JobPayload {
-  pageId?: string
+interface JobData {
   postId?: string
   commentId?: string
-  userId?: string
+  pageId?: string
   dateRange?: {
     since: string
     until: string
   }
   platform?: 'FACEBOOK' | 'INSTAGRAM'
-  [key: string]: any
+  [key: string]: string | number | boolean | object | undefined
 }
 
 export class JobQueue {
@@ -40,7 +39,7 @@ export class JobQueue {
     const job = await prisma.job.create({
       data: {
         type,
-        payload: payload as any,
+        payload: payload as JobData,
         maxAttempts,
         scheduledAt: scheduledAt || new Date(),
         status: JobStatus.QUEUED
@@ -51,7 +50,13 @@ export class JobQueue {
   }
 
   // Get next job to process
-  async getNextJob(): Promise<any> {
+  async getNextJob(): Promise<{
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  } | null> {
     const job = await prisma.job.findFirst({
       where: {
         status: JobStatus.QUEUED,
@@ -181,14 +186,20 @@ export class JobQueue {
     } catch (error) {
       console.error('Error processing job:', error)
       if (error instanceof Error && 'jobId' in error) {
-        await this.failJob((error as any).jobId, error.message)
+        await this.failJob((error as Error & { jobId: string }).jobId, error.message)
       }
     }
   }
 
   // Job processors
-  private async processFetchPostsJob(job: any): Promise<void> {
-    const { pageId, dateRange, platform } = job.payload as JobPayload
+  private async processFetchPostsJob(job: {
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  }): Promise<void> {
+    const { pageId, dateRange, platform } = job.payload
     
     try {
       // Import here to avoid circular dependencies
@@ -197,13 +208,19 @@ export class JobQueue {
     } catch (error) {
       const err = error as Error
       err.message = `Failed to fetch posts: ${err.message}`
-      ;(err as any).jobId = job.id
+      ;(err as Error & { jobId: string }).jobId = job.id
       throw err
     }
   }
 
-  private async processFetchCommentsJob(job: any): Promise<void> {
-    const { postId, platform } = job.payload as JobPayload
+  private async processFetchCommentsJob(job: {
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  }): Promise<void> {
+    const { postId, platform } = job.payload
     
     try {
       const { fetchCommentsForPost } = await import('./workers/fetch-comments')
@@ -211,13 +228,19 @@ export class JobQueue {
     } catch (error) {
       const err = error as Error
       err.message = `Failed to fetch comments: ${err.message}`
-      ;(err as any).jobId = job.id
+      ;(err as Error & { jobId: string }).jobId = job.id
       throw err
     }
   }
 
-  private async processAnalyzeSentimentJob(job: any): Promise<void> {
-    const { commentId } = job.payload as JobPayload
+  private async processAnalyzeSentimentJob(job: {
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  }): Promise<void> {
+    const { commentId } = job.payload
     
     try {
       const { analyzeSentiment } = await import('./workers/analyze-sentiment')
@@ -225,7 +248,7 @@ export class JobQueue {
     } catch (error) {
       const err = error as Error
       err.message = `Failed to analyze sentiment: ${err.message}`
-      ;(err as any).jobId = job.id
+      ;(err as Error & { jobId: string }).jobId = job.id
       throw err
     }
   }
@@ -237,7 +260,7 @@ export class JobQueue {
     } catch (error) {
       const err = error as Error
       err.message = `Failed to refresh tokens: ${err.message}`
-      ;(err as any).jobId = job.id
+      ;(err as Error & { jobId: string }).jobId = job.id
       throw err
     }
   }
@@ -251,7 +274,7 @@ export class JobQueue {
     } catch (error) {
       const err = error as Error
       err.message = `Failed to cleanup data: ${err.message}`
-      ;(err as any).jobId = job.id
+      ;(err as Error & { jobId: string }).jobId = job.id
       throw err
     }
   }
