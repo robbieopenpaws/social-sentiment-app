@@ -2,13 +2,28 @@
 
 import { useState } from 'react'
 
-export default function InstagramExplorer() {
-  const [instagramUrl, setInstagramUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState('')
+interface SentimentData {
+  positive: number
+  neutral: number
+  negative: number
+}
 
-  const analyzeInstagramPost = async () => {
+interface AnalysisResult {
+  postId: string
+  caption: string
+  likes: number
+  comments: number
+  engagement: string
+  sentiment: SentimentData
+}
+
+export default function InstagramExplorer(): JSX.Element {
+  const [instagramUrl, setInstagramUrl] = useState<string>('')
+  const [loading, setLoading] = useState<boolean>(false)
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [error, setError] = useState<string>('')
+
+  const analyzeInstagramPost = async (): Promise<void> => {
     if (!instagramUrl) {
       setError('Please enter an Instagram URL')
       return
@@ -212,6 +227,18 @@ export default function InstagramExplorer() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div style={{ 
+            marginTop: '24px', 
+            padding: '16px', 
+            backgroundColor: '#f0f9ff', 
+            borderRadius: '8px',
+            border: '1px solid #0ea5e9'
+          }}>
+            <p style={{ fontSize: '14px', color: '#0c4a6e', textAlign: 'center', margin: 0 }}>
+              🚀 Demo Mode: This is a working prototype with sample data. Real Instagram API integration coming soon!
+            </p>
           </div>
         </div>
       )}
