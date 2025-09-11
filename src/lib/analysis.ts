@@ -59,7 +59,7 @@ export class LocalTransformersAnalyzer implements SentimentAnalyzer {
 
     try {
       // Sentiment analysis
-      const sentimentResult = await this.pipeline(text)
+      const sentimentResult = await (this.pipeline as any)(text)
       const sentiment = sentimentResult[0]
 
       // Map labels to our enum
@@ -76,7 +76,7 @@ export class LocalTransformersAnalyzer implements SentimentAnalyzer {
       }
 
       // Toxicity analysis
-      const toxicityResult = await this.toxicityPipeline(text)
+      const toxicityResult = await (this.toxicityPipeline as any)(text)
       const toxicityScore = toxicityResult.find((r: {
         label: string
         score: number
