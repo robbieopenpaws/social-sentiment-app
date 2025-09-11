@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     if (sentiment) {
       whereClause.analysis = {
         some: {
-          sentimentLabel: sentiment
+          sentimentLabel: sentiment as Sentiment
         }
       }
     }
