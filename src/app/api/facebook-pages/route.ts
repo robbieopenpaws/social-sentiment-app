@@ -36,7 +36,13 @@ export async function GET(request: NextRequest) {
     const data = await response.json()
     
     // Transform the data to include page access tokens
-    const pages = data.data.map((page: any) => ({
+    const pages = data.data.map((page: {
+      id: string
+      name: string
+      category: string
+      access_token: string
+      tasks?: string[]
+    }) => ({
       id: page.id,
       name: page.name,
       category: page.category,

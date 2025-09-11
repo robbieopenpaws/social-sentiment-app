@@ -253,7 +253,13 @@ export class JobQueue {
     }
   }
 
-  private async processRefreshTokensJob(job: any): Promise<void> {
+  private async processRefreshTokensJob(job: {
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  }): Promise<void> {
     try {
       const { refreshExpiredTokens } = await import('./workers/refresh-tokens')
       await refreshExpiredTokens()
@@ -265,8 +271,14 @@ export class JobQueue {
     }
   }
 
-  private async processCleanupDataJob(job: any): Promise<void> {
-    const { userId } = job.payload as JobPayload
+  private async processCleanupDataJob(job: {
+    id: string
+    type: JobType
+    payload: JobData
+    attempts: number
+    maxAttempts: number
+  }): Promise<void> {
+    const { userId } = job.payload
     
     try {
       const { cleanupUserData } = await import('./workers/cleanup-data')

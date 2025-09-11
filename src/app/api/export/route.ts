@@ -39,7 +39,23 @@ export async function GET(request: NextRequest) {
     const fields = searchParams.get('fields')?.split(',') || []
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: {
+      post: {
+        page: {
+          ownerUserId: string
+        }
+        pageId?: string
+      }
+      createdTime?: {
+        gte?: Date
+        lte?: Date
+      }
+      analysis?: {
+        some: {
+          sentimentLabel: string
+        }
+      }
+    } = {
       post: {
         page: {
           ownerUserId: user.id
@@ -66,7 +82,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch data based on type
-    let data: any[] = []
+    let data: unknown[] = []
 
     if (dataType === 'comments') {
       data = await prisma.comment.findMany({
@@ -198,7 +214,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateCSV(data: any[], dataType: string, fields: string[]): string {
+function generateCSV(data: unknown[], dataType: string, fields: string[]): string {
   if (data.length === 0) {
     return 'No data available'
   }
