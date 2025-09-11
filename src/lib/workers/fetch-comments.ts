@@ -5,9 +5,22 @@ import { JobQueue } from '../queue'
 
 const prisma = new PrismaClient()
 
+interface CommentData {
+  postId: string
+  platform: Platform
+  externalId: string
+  parentExternalId: string | null
+  authorId: string | null
+  authorName: string | null
+  authorUsername: string | null
+  message: string
+  createdTime: Date
+  likeCount: number
+  replyCount: number
+}
+
 export async function fetchCommentsForPost(
-  postId: string,
-  platform?: 'FACEBOOK' | 'INSTAGRAM'
+  postId: string
 ): Promise<void> {
   try {
     // Get post details with page information
@@ -24,7 +37,7 @@ export async function fetchCommentsForPost(
     const pageToken = TokenEncryption.decrypt(post.page.pageAccessToken)
     const api = new MetaGraphAPI(pageToken)
 
-    let comments: any[] = []
+    let comments: CommentData[] = []
 
     if (post.platform === Platform.FACEBOOK) {
       // Fetch Facebook comments

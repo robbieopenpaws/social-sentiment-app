@@ -5,10 +5,21 @@ import { JobQueue } from '../queue'
 
 const prisma = new PrismaClient()
 
+interface PostData {
+  pageId: string
+  platform: Platform
+  externalId: string
+  message: string | null
+  caption: string | null
+  createdTime: Date
+  permalinkUrl: string
+  likeCount: number
+  commentCount: number
+}
+
 export async function fetchPostsForPage(
   pageId: string,
-  dateRange?: { since: string; until: string },
-  platform?: 'FACEBOOK' | 'INSTAGRAM'
+  dateRange?: { since: string; until: string }
 ): Promise<void> {
   try {
     // Get page details
@@ -30,7 +41,7 @@ export async function fetchPostsForPage(
       throw new Error(`Invalid token for page: ${page.name}`)
     }
 
-    let posts: any[] = []
+    let posts: PostData[] = []
 
     if (page.platform === Platform.FACEBOOK) {
       // Fetch Facebook posts
