@@ -210,7 +210,7 @@ export default function ExportPage() {
             {/* Format Selection */}
             <div className="space-y-2">
               <Label>Export Format</Label>
-              <Select value={options.format} onValueChange={(value: string) => setOptions(prev => ({ ...prev, format: value }))}>
+              <Select value={options.format} onValueChange={(value: 'csv' | 'json' | 'xlsx') => setOptions(prev => ({ ...prev, format: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -225,7 +225,7 @@ export default function ExportPage() {
             {/* Data Type Selection */}
             <div className="space-y-2">
               <Label>Data Type</Label>
-              <Select value={options.dataType} onValueChange={(value: string) => setOptions(prev => ({ ...prev, dataType: value }))}>
+              <Select value={options.dataType} onValueChange={(value: 'comments' | 'analysis' | 'aggregated') => setOptions(prev => ({ ...prev, dataType: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
