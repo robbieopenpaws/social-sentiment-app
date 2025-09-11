@@ -187,7 +187,7 @@ export default function PagesPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                <p>To connect pages, you'll need:</p>
+                <p>To connect pages, you&apos;ll need:</p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
                   <li>Admin access to Facebook Pages</li>
                   <li>Instagram Business accounts linked to Facebook Pages</li>
@@ -312,7 +312,7 @@ export default function PagesPage() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="text-sm text-muted-foreground">
-                    <p>To connect pages, you'll need:</p>
+                    <p>To connect pages, you&apos;ll need:</p>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Admin access to Facebook Pages</li>
                       <li>Instagram Business accounts linked to Facebook Pages</li>
