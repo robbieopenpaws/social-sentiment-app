@@ -17,7 +17,7 @@ interface AnalysisResult {
   sentiment: SentimentData
 }
 
-export default function InstagramExplorer(): JSX.Element {
+export default function InstagramExplorer() {
   const [instagramUrl, setInstagramUrl] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
