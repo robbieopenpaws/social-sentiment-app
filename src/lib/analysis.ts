@@ -23,8 +23,8 @@ export interface SentimentAnalyzer {
 
 // Local Node.js analyzer using @xenova/transformers
 export class LocalTransformersAnalyzer implements SentimentAnalyzer {
-  private pipeline: any = null
-  private toxicityPipeline: any = null
+  private pipeline: unknown = null
+  private toxicityPipeline: unknown = null
   private initialized = false
 
   async initialize(): Promise<void> {
@@ -77,7 +77,10 @@ export class LocalTransformersAnalyzer implements SentimentAnalyzer {
 
       // Toxicity analysis
       const toxicityResult = await this.toxicityPipeline(text)
-      const toxicityScore = toxicityResult.find((r: any) => 
+      const toxicityScore = toxicityResult.find((r: {
+        label: string
+        score: number
+      }) => 
         r.label.toLowerCase().includes('toxic')
       )?.score || 0
 
