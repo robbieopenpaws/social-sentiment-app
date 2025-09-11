@@ -1,7 +1,7 @@
 // src/app/api/export/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Sentiment } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
       analysis?: {
         some: {
-          sentimentLabel: string
+          sentimentLabel: Sentiment
         }
       }
     } = {
