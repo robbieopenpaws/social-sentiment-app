@@ -245,17 +245,17 @@ function generateCSV(data: unknown[], dataType: string, fields: string[]): strin
     headers = selectedFields.map(field => availableHeaders[field as keyof typeof availableHeaders] || field)
 
     rows = data.map(comment => {
-      const analysis = comment.analysis?.[0]
+      const analysis = (comment as any).analysis?.[0]
       return selectedFields.map(field => {
         switch (field) {
           case 'commentId':
-            return comment.externalId || ''
+            return (comment as any).externalId || ''
           case 'authorName':
-            return comment.authorName || ''
+            return (comment as any).authorName || ''
           case 'authorUsername':
-            return comment.authorUsername || ''
+            return (comment as any).authorUsername || ''
           case 'message':
-            return `"${(comment.message || '').replace(/"/g, '""')}"`
+            return `"${((comment as any).message || '').replace(/"/g, '""')}"`
           case 'sentiment':
             return analysis?.sentimentLabel || ''
           case 'sentimentScore':
@@ -265,15 +265,15 @@ function generateCSV(data: unknown[], dataType: string, fields: string[]): strin
           case 'keywords':
             return analysis?.keywords ? `"${analysis.keywords.join(', ')}"` : ''
           case 'platform':
-            return comment.platform || ''
+            return (comment as any).platform || ''
           case 'createdTime':
-            return comment.createdTime ? new Date(comment.createdTime).toISOString() : ''
+            return (comment as any).createdTime ? new Date((comment as any).createdTime).toISOString() : ''
           case 'likeCount':
-            return comment.likeCount?.toString() || '0'
+            return (comment as any).likeCount?.toString() || '0'
           case 'pageName':
-            return comment.post?.page?.name || ''
+            return (comment as any).post?.page?.name || ''
           case 'postContent':
-            return `"${(comment.post?.message || comment.post?.caption || '').replace(/"/g, '""')}"`
+            return `"${((comment as any).post?.message || (comment as any).post?.caption || '').replace(/"/g, '""')}"`
           default:
             return ''
         }
@@ -294,16 +294,16 @@ function generateCSV(data: unknown[], dataType: string, fields: string[]): strin
     ]
 
     rows = data.map(analysis => [
-      analysis.comment?.externalId || '',
-      analysis.sentimentLabel || '',
-      analysis.sentimentScore?.toFixed(3) || '',
-      analysis.toxicityScore?.toFixed(3) || '',
-      analysis.language || '',
-      analysis.keywords ? `"${analysis.keywords.join(', ')}"` : '',
-      analysis.modelName || '',
-      analysis.analyzedAt ? new Date(analysis.analyzedAt).toISOString() : '',
-      analysis.comment?.platform || '',
-      analysis.comment?.post?.page?.name || ''
+      (analysis as any).comment?.externalId || '',
+      (analysis as any).sentimentLabel || '',
+      (analysis as any).sentimentScore?.toFixed(3) || '',
+      (analysis as any).toxicityScore?.toFixed(3) || '',
+      (analysis as any).language || '',
+      (analysis as any).keywords ? `"${(analysis as any).keywords.join(', ')}"` : '',
+      (analysis as any).modelName || '',
+      (analysis as any).analyzedAt ? new Date((analysis as any).analyzedAt).toISOString() : '',
+      (analysis as any).comment?.platform || '',
+      (analysis as any).comment?.post?.page?.name || ''
     ])
   } else if (dataType === 'aggregated') {
     headers = [
@@ -322,18 +322,18 @@ function generateCSV(data: unknown[], dataType: string, fields: string[]): strin
     ]
 
     rows = data.map(post => [
-      post.postId || '',
-      post.pageName || '',
-      post.platform || '',
-      `"${(post.postContent || '').replace(/"/g, '""')}"`,
-      post.createdTime ? new Date(post.createdTime).toISOString() : '',
-      post.totalComments?.toString() || '0',
-      post.totalLikes?.toString() || '0',
-      post.positive?.toString() || '0',
-      post.negative?.toString() || '0',
-      post.neutral?.toString() || '0',
-      post.avgSentimentScore?.toFixed(3) || '0',
-      post.avgToxicityScore?.toFixed(3) || '0'
+      (post as any).postId || '',
+      (post as any).pageName || '',
+      (post as any).platform || '',
+      `"${((post as any).postContent || '').replace(/"/g, '""')}"`,
+      (post as any).createdTime ? new Date((post as any).createdTime).toISOString() : '',
+      (post as any).totalComments?.toString() || '0',
+      (post as any).totalLikes?.toString() || '0',
+      (post as any).positive?.toString() || '0',
+      (post as any).negative?.toString() || '0',
+      (post as any).neutral?.toString() || '0',
+      (post as any).avgSentimentScore?.toFixed(3) || '0',
+      (post as any).avgToxicityScore?.toFixed(3) || '0'
     ])
   }
 
